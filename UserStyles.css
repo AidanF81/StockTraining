@@ -1,0 +1,236 @@
+/* General Element Styles & Typography */
+body {
+    color: #1e293b;
+    background-color: #f8fafc;
+}
+
+/* Form Fields & Labels */
+form div {
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+}
+
+label {
+    margin-bottom: 6px;
+    font-weight: bold;
+    color: #334155;
+    font-size: 0.95rem;
+}
+
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="number"],
+select {
+    padding: 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    font-size: 1rem;
+    background-color: #fff;
+    color: #0f172a;
+}
+
+input:focus, select:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+input::placeholder {
+    color: #94a3b8;
+    font-style: italic;
+}
+
+/* Buttons */
+button, 
+input[type="submit"] {
+    padding: 10px 20px;
+    background-color: #e2e8f0;
+    border: 1px solid #cbd5e1;
+    cursor: pointer;
+    font-weight: bold;
+    border-radius: 4px;
+    color: #1e293b;
+    transition: background-color 0.2s;
+}
+
+button:hover, 
+input[type="submit"]:hover {
+    background-color: #cbd5e1;
+}
+
+/* Tables (For Portfolio, History, etc.) */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+    background-color: #fff;
+}
+
+th, td {
+    border: 1px solid #e2e8f0;
+    padding: 12px;
+    text-align: center;
+    font-size: 0.95rem;
+}
+
+th {
+    background-color: #f1f5f9;
+    color: #0f172a;
+    font-weight: bold;
+}
+
+tr:nth-child(even) {
+    background-color: #f8fafc;
+}
+
+/* Footer Links */
+footer p {
+    margin: 0;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+footer p:hover {
+    color: #ffffff;
+}
+
+/* Wider container box specifically for the Buy/Sell page and Portfolios */
+.container-box.trade-container {
+    max-width: 800px;
+}
+
+/* Buy/Sell Mode Toggle Buttons */
+.trade-mode-toggle {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.trade-mode-toggle button {
+    padding: 8px 30px;
+    font-weight: bold;
+    cursor: pointer;
+    border: 1px solid #cbd5e1;
+    background-color: #f1f5f9;
+    border-radius: 4px;
+    color: #334155;
+}
+
+/* Highlight style when active */
+.trade-mode-toggle button.active-mode {
+    background-color: #0f172a; 
+    color: #ffffff;
+    border-color: #0f172a;
+}
+
+/* Hidden transaction messages by default, activated when needed */
+.message-area {
+    display: none;
+    margin-top: 15px;
+    padding: 10px;
+    border-radius: 4px;
+    font-weight: bold;
+    text-align: center;
+}
+
+.message-area.error {
+    display: block;
+    background-color: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+}
+
+.message-area.success {
+    display: block;
+    background-color: #d1fae5;
+    color: #065f46;
+    border: 1px solid #6ee7b7;
+}
+
+/* Monospace alignment for financial numbers and data cells */
+.numeric, .financial-value {
+    font-family: 'Courier New', Courier, monospace;
+}
+
+/* Stat Card Summary Widgets */
+.stat-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.stat-card {
+    background-color: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 15px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.stat-card .stat-label {
+    font-size: 0.8rem;
+    color: #64748b;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 5px;
+}
+
+.stat-card .stat-value {
+    font-size: 1.3rem;
+    font-weight: bold;
+    color: #0f172a;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+/* Market Status Badges */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: bold;
+}
+
+.status-badge.open {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.status-badge.closed {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+/* Financial Gain / Loss Text Colors */
+.text-gain {
+    color: #059669;
+    font-weight: bold;
+}
+
+.text-loss {
+    color: #dc2626;
+    font-weight: bold;
+}
+
+/* Table Enhancements: Row Hover & Empty States */
+table.trade-holdings-table tbody tr {
+    transition: background-color 0.15s ease-in-out;
+}
+
+table.trade-holdings-table tbody tr:hover {
+    background-color: #f1f5f9;
+}
+
+.table-empty-state {
+    text-align: center;
+    padding: 35px;
+    color: #64748b;
+    font-style: italic;
+    background-color: #ffffff;
+}

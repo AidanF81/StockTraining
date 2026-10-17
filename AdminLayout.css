@@ -1,0 +1,122 @@
+/* Layout structure */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background-color: #f8fafc;
+    color: #1e293b;
+}
+
+/* Header and banner */
+header {
+    width: 100%;
+    border-bottom: 2px solid #cbd5e1;
+    background-color: #0f172a;
+    color: #ffffff;
+    padding: 20px 0 15px 0;
+    text-align: center;
+}
+
+header h2 {
+    margin: 0 0 12px 0;
+    font-size: 1.8rem;
+    color: #ffffff;
+}
+
+/* Navigation bar */
+nav {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 20px 8px 20px;
+    border-top: 1px solid #334155;
+    background-color: #1e293b;
+}
+
+nav a {
+    text-decoration: none;
+    color: #e2e8f0;
+    font-weight: bold;
+    padding: 6px 12px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+}
+
+nav a:hover {
+    border-color: #64748b;
+    background-color: #334155;
+    color: #ffffff;
+}
+
+nav a.active-nav {
+    background-color: #2563eb;
+    color: #ffffff;
+    border-color: #1d4ed8;
+}
+
+/* Main content area */
+main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 40px 20px;
+}
+
+/* Containers and cards */
+.container-box, .admin-container {
+    border: 1px solid #cbd5e1;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    padding: 30px;
+    width: 100%;
+    max-width: 600px;
+    background-color: #ffffff;
+    box-sizing: border-box;
+    border-radius: 6px;
+}
+
+/* Page title banner */
+.page-title {
+    border: 1px solid #cbd5e1;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+    padding: 12px 20px;
+    margin-bottom: 20px;
+    text-align: center;
+    font-size: 1.2rem;
+    font-weight: bold;
+    background-color: #ffffff;
+    color: #0f172a;
+    width: 100%;
+    max-width: 600px;
+    box-sizing: border-box;
+    border-radius: 6px;
+}
+
+/* Footer */
+footer {
+    width: 100%;
+    border-top: 1px solid #cbd5e1;
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    background-color: #0f172a;
+    color: #94a3b8;
+    box-sizing: border-box;
+    font-size: 0.9rem;
+}
+
+footer p {
+    margin: 0;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+footer p:hover {
+    color: #ffffff;
+}

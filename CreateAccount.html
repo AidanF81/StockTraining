@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Account - Stock Training System</title>
+    <link rel="stylesheet" href="UserLayout.css">
+    <link rel="stylesheet" href="UserStyles.css">
+</head>
+<body>
+
+    <!-- Website Banner -->
+    <header>
+        <h2>Stock Training System</h2>
+        <nav>
+            <a href="Login.html">Login</a> |
+            <a href="CreateAccount.html" class="active-nav">Create Account</a> |
+            <a href="BuySell.html">Buy/Sell</a> |
+            <a href="DepositWithdraw.html">Deposit/Withdraw</a> |
+            <a href="Portfolio.html">Portfolio</a> |
+            <a href="History.html">Transaction History</a> 
+        </nav>
+    </header>
+
+    <main>
+        <!-- Page Title Box -->
+        <div class="page-title">
+            Create User Account
+        </div>
+
+        <!-- Create Account Box -->
+        <div class="container-box create-account-container">
+            <fieldset class="create-account-fieldset" style="border: none; padding: 0; margin: 0;">
+                <legend class="create-account-legend" style="font-weight: bold; margin-bottom: 20px; color: #0f172a;">Enter Account Information</legend>
+                <form id="createAccountForm">
+                    <div class="form-group">
+                        <label for="firstName">First Name:</label>
+                        <input type="text" id="firstName" placeholder="Fill-in" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="lastName">Last Name:</label>
+                        <input type="text" id="lastName" placeholder="Fill-in" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="username">Username:</label>
+                        <input type="text" id="username" placeholder="Fill-in" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email Address:</label>
+                        <input type="email" id="email" placeholder="Fill-in" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password:</label>
+                        <input type="password" id="password" placeholder="Fill-in" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPassword">Confirm Password:</label>
+                        <input type="password" id="confirmPassword" placeholder="Fill-in" required>
+                    </div>
+                    <div class="form-action" style="margin-top: 20px;">
+                        <button type="submit">Complete Account Creation</button>
+                    </div>
+                </form>
+            </fieldset>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>Settings</p>
+        <p>Help</p>
+    </footer>
+    
+</body>
+</html>

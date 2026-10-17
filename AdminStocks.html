@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- meta tags -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Management - Admin - Stock Training System</title>
+    <!-- Link to Admin CSS files -->
+    <link rel="stylesheet" href="AdminLayout.css">
+    <link rel="stylesheet" href="AdminStyles.css">
+</head>
+<body>
+
+    <!-- Website Banner -->
+    <header>
+        <h2>Stock Training System - Admin</h2>
+        <nav>
+            <a href="AdminStocks.html" class="active-nav">Stocks</a> |
+            <a href="AdminMarketHours.html">Change Market Hours</a> |
+            <a href="AdminMarketSchedule.html">Change Market Schedule</a>
+        </nav>
+    </header>
+
+    <main>
+        <!-- Mode Toggle Buttons (Create Stock / View Stocks view switcher) -->
+        <div class="trade-mode-toggle" style="margin-bottom: 20px;">
+            <button type="button" id="createStockModeBtn" class="active-mode">Create Stock</button>
+            <button type="button" id="viewStocksModeBtn">View Stocks</button>
+        </div>
+
+        <!-- CREATE STOCK SECTION (Wireframe 8) -->
+        <div id="createStockSection" class="admin-section">
+            <div class="page-title">
+                Create Stock
+            </div>
+
+            <div class="container-box admin-container">
+                <form id="createStockForm">
+                    <div class="form-group">
+                        <label for="companyName">Company Name:</label>
+                        <input type="text" id="companyName" placeholder="Enter company name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="stockTicker">Stock Ticker:</label>
+                        <input type="text" id="stockTicker" placeholder="e.g. AAPL" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="stockVolume">Volume:</label>
+                        <input type="number" id="stockVolume" placeholder="Total initial shares" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="initialPrice">Initial Price (\$):</label>
+                        <input type="number" id="initialPrice" placeholder="0.00" step="0.01" min="0.01" required>
+                    </div>
+                    <div class="form-action-group" style="display: flex; gap: 10px; margin-top: 20px;">
+                        <button type="submit" class="action-btn">Create Stock</button>
+                        <button type="button" class="cancel-btn" id="clearCreateStockBtn">Clear</button>
+                    </div>
+                </form>
+                <!-- Dynamic message area for stock creation feedback -->
+                <div id="createStockMessageArea" class="message-area"></div>
+            </div>
+        </div>
+
+        <!-- VIEW STOCKS SECTION (Toggle view) -->
+        <div id="viewStocksSection" class="admin-section" style="display: none;">
+            <div class="page-title">
+                View Stocks
+            </div>
+
+            <div class="container-box admin-container" style="max-width: 900px;">
+                <table class="trade-holdings-table" id="allStocksTable">
+                    <thead>
+                        <tr>
+                            <th>Company Name</th>
+                            <th>Ticker</th>
+                            <th>Initial Price</th>
+                            <th>Current Price</th>
+                            <th>Volume</th>
+                            <th>Market Cap</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="6" class="table-empty-state">
+                                No stocks created currently
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>Settings</p>
+        <p>Help</p>
+    </footer>
+
+    <!-- JavaScript to toggle Create / View Stocks views -->
+    <script>
+        const createBtn = document.getElementById('createStockModeBtn');
+        const viewBtn = document.getElementById('viewStocksModeBtn');
+        const createSection = document.getElementById('createStockSection');
+        const viewSection = document.getElementById('viewStocksSection');
+
+        // Toggle Create Stock View
+        createBtn.addEventListener('click', () => {
+            createSection.style.display = 'block';
+            viewSection.style.display = 'none';
+            createBtn.classList.add('active-mode');
+            viewBtn.classList.remove('active-mode');
+        });
+
+        // Toggle View Stocks View
+        viewBtn.addEventListener('click', () => {
+            createSection.style.display = 'none';
+            viewSection.style.display = 'block';
+            viewBtn.classList.add('active-mode');
+            createBtn.classList.remove('active-mode');
+        });
+
+        // Create Stock Form Handling
+        const createStockForm = document.getElementById('createStockForm');
+        const createStockMessageArea = document.getElementById('createStockMessageArea');
+
+        createStockForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const companyName = document.getElementById('companyName').value.trim();
+            const ticker = document.getElementById('stockTicker').value.trim();
+            const volume = document.getElementById('stockVolume').value;
+            const price = document.getElementById('initialPrice').value;
+
+            if (!companyName || !ticker || !volume || !price) {
+                createStockMessageArea.textContent = 'Please fill in all stock details';
+                createStockMessageArea.className = 'message-area error';
+            } else {
+                // Placeholder for backend success handling
+                createStockMessageArea.textContent = `Stock ${ticker.toUpperCase()} created successfully`;
+                createStockMessageArea.className = 'message-area success';
+            }
+        });
+
+        // Clear button
+        document.getElementById('clearCreateStockBtn').addEventListener('click', () => {
+            createStockForm.reset();
+            createStockMessageArea.className = 'message-area';
+            createStockMessageArea.textContent = '';
+        });
+    </script>
+
+</body>
+</html>

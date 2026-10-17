@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transaction History - Stock Training System</title>
+    <link rel="stylesheet" href="UserLayout.css">
+    <link rel="stylesheet" href="UserStyles.css">
+</head>
+<body>
+
+    <!-- Website Banner -->
+    <header>
+        <h2>Stock Training System</h2>
+        <nav>
+            <a href="Login.html">Login</a> |
+            <a href="CreateAccount.html">Create Account</a> |
+            <a href="BuySell.html">Buy/Sell</a> |
+            <a href="DepositWithdraw.html">Deposit/Withdraw</a> |
+            <a href="Portfolio.html">Portfolio</a> |
+            <a href="History.html" class="active-nav">Transaction History</a> 
+        </nav>
+    </header>
+
+    <main>
+        <!-- Page Title Box -->
+        <div class="page-title">
+            Transaction History
+        </div>
+
+        <!-- History Container Box -->
+        <div class="container-box trade-container">
+            
+            <!-- Stat Card Summaries -->
+            <div class="stat-card-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Current Cash</div>
+                    <div class="stat-value" id="historyCash">$0.00</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Stock Value</div>
+                    <div class="stat-value" id="historyStockValue">$0.00</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Portfolio Value</div>
+                    <div class="stat-value" id="historyTotalValue">$0.00</div>
+                </div>
+            </div>
+
+            <!-- Transaction History Table -->
+            <table class="trade-holdings-table" id="transactionHistoryTable">
+                <thead>
+                    <tr>
+                        <th>Stock Name</th>
+                        <th>Shares Bought</th>
+                        <th>Market Price When Sold</th>
+                        <th>Change in Cash</th>
+                        <th>Change in Portfolio Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="5" class="table-empty-state">
+                            No transaction history currently
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>Settings</p>
+        <p>Help</p>
+    </footer>
+
+    <script>
+        // Backend/Database integration will populate transaction records here.
+    </script>
+    
+</body>
+</html>

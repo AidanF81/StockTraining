@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deposit / Withdraw - Stock Training System</title>
+    <link rel="stylesheet" href="UserLayout.css">
+    <link rel="stylesheet" href="UserStyles.css">
+</head>
+<body>
+
+    <!-- Website Banner -->
+    <header>
+        <h2>Stock Training System</h2>
+        <nav>
+            <a href="Login.html">Login</a> |
+            <a href="CreateAccount.html">Create Account</a> |
+            <a href="BuySell.html">Buy/Sell</a> |
+            <a href="DepositWithdraw.html" class="active-nav">Deposit/Withdraw</a> |
+            <a href="Portfolio.html">Portfolio</a> |
+            <a href="History.html">Transaction History</a> 
+        </nav>
+    </header>
+
+    <main>
+        <!-- Page Title Box -->
+        <div class="page-title">
+            Deposit / Withdraw
+        </div>
+
+        <!-- Container Box -->
+        <div class="container-box trade-container">
+            
+            <!-- Stat Card Summary for Cash Balance -->
+            <div class="stat-card-grid" style="grid-template-columns: 1fr;">
+                <div class="stat-card">
+                    <div class="stat-label">Available Cash Balance</div>
+                    <div class="stat-value" id="availableCashBalance">$0.00</div>
+                </div>
+            </div>
+
+            <!-- Mode Toggle Buttons -->
+            <div class="trade-mode-toggle">
+                <button type="button" id="depositModeBtn" class="active-mode">Deposit</button>
+                <button type="button" id="withdrawModeBtn">Withdraw</button>
+            </div>
+
+            <!-- DEPOSIT SECTION -->
+            <div id="depositSection" class="trade-section">
+                <form id="depositForm">
+                    <div class="form-group">
+                        <label for="depositAmount">Amount ($):</label>
+                        <input type="number" id="depositAmount" placeholder="" step="0.01" min="0.01">
+                    </div>
+                    <div class="form-action-group" style="display: flex; gap: 10px;">
+                        <button type="submit" class="action-btn">Submit</button>
+                        <button type="button" class="cancel-btn" id="clearDepositBtn">Clear</button>
+                    </div>
+                </form>
+                <div id="depositMessageArea" class="message-area"></div>
+            </div>
+
+            <!-- WITHDRAW SECTION -->
+            <div id="withdrawSection" class="trade-section" style="display: none;">
+                <form id="withdrawForm">
+                    <div class="form-group">
+                        <label for="withdrawAmount">Amount ($):</label>
+                        <input type="number" id="withdrawAmount" placeholder="" step="0.01" min="0.01">
+                    </div>
+                    <p style="font-size: 0.9rem; color: #64748b; margin-top: -5px; margin-bottom: 15px; font-style: italic;">Withdrawal cannot exceed available cash balance.</p>
+                    <div class="form-action-group" style="display: flex; gap: 10px;">
+                        <button type="submit" class="action-btn">Submit</button>
+                        <button type="button" class="cancel-btn" id="clearWithdrawBtn">Clear</button>
+                    </div>
+                </form>
+                <div id="withdrawMessageArea" class="message-area"></div>
+            </div>
+
+            <!-- Recent Cash Transactions Table -->
+            <div style="margin-top: 30px;">
+                <p style="font-weight: bold; margin-bottom: 10px; color: #0f172a;">Recent cash transactions:</p>
+                <table class="trade-holdings-table" id="cashTransactionsTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Amount</th>
+                            <th>Balance After</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="4" class="table-empty-state">
+                                No recent cash transactions currently
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>Settings</p>
+        <p>Help</p>
+    </footer>
+
+    <script>
+        const depositBtn = document.getElementById('depositModeBtn');
+        const withdrawBtn = document.getElementById('withdrawModeBtn');
+        const depositSection = document.getElementById('depositSection');
+        const withdrawSection = document.getElementById('withdrawSection');
+
+        depositBtn.addEventListener('click', () => {
+            depositSection.style.display = 'block';
+            withdrawSection.style.display = 'none';
+            depositBtn.classList.add('active-mode');
+            withdrawBtn.classList.remove('active-mode');
+        });
+
+        withdrawBtn.addEventListener('click', () => {
+            depositSection.style.display = 'none';
+            withdrawSection.style.display = 'block';
+            withdrawBtn.classList.add('active-mode');
+            depositBtn.classList.remove('active-mode');
+        });
+
+        const isMarketOpen = true; 
+
+        // Deposit Validation
+        const depositForm = document.getElementById('depositForm');
+        const depositMessageArea = document.getElementById('depositMessageArea');
+        const depositAmountInput = document.getElementById('depositAmount');
+
+        depositForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const amount = parseFloat(depositAmountInput.value);
+
+            if (!isMarketOpen) {
+                depositMessageArea.textContent = 'Market is closed';
+                depositMessageArea.className = 'message-area error';
+            } else if (isNaN(amount) || amount <= 0) {
+                depositMessageArea.textContent = 'Enter a valid amount';
+                depositMessageArea.className = 'message-area error';
+            } else {
+                depositMessageArea.textContent = 'Deposit complete';
+                depositMessageArea.className = 'message-area success';
+            }
+        });
+
+        // Withdraw Validation
+        const withdrawForm = document.getElementById('withdrawForm');
+        const withdrawMessageArea = document.getElementById('withdrawMessageArea');
+        const withdrawAmountInput = document.getElementById('withdrawAmount');
+
+        withdrawForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const amount = parseFloat(withdrawAmountInput.value);
+            const currentCash = parseFloat(document.getElementById('availableCashBalance').textContent.replace('$', '').replace(',', '')) || 0.0;
+
+            if (!isMarketOpen) {
+                withdrawMessageArea.textContent = 'Market is closed';
+                withdrawMessageArea.className = 'message-area error';
+            } else if (isNaN(amount) || amount <= 0) {
+                withdrawMessageArea.textContent = 'Enter a valid amount';
+                withdrawMessageArea.className = 'message-area error';
+            } else if (amount > currentCash) {
+                withdrawMessageArea.textContent = 'Insufficient funds';
+                withdrawMessageArea.className = 'message-area error';
+            } else {
+                withdrawMessageArea.textContent = 'Withdraw complete';
+                withdrawMessageArea.className = 'message-area success';
+            }
+        });
+
+        // Clear buttons
+        document.getElementById('clearDepositBtn').addEventListener('click', () => {
+            depositAmountInput.value = '';
+            depositMessageArea.className = 'message-area';
+            depositMessageArea.textContent = '';
+        });
+
+        document.getElementById('clearWithdrawBtn').addEventListener('click', () => {
+            withdrawAmountInput.value = '';
+            withdrawMessageArea.className = 'message-area';
+            withdrawMessageArea.textContent = '';
+        });
+    </script>
+    
+</body>
+</html>

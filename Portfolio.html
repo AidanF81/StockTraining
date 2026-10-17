@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- meta tags -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio - Stock Training System</title>
+    <!-- Link to CSS files -->
+    <link rel="stylesheet" href="UserLayout.css">
+    <link rel="stylesheet" href="UserStyles.css">
+</head>
+<body>
+
+    <!-- Website Banner -->
+    <header>
+        <h2>Stock Training System</h2>
+        <nav>
+            <a href="Login.html">Login</a> |
+            <a href="CreateAccount.html">Create Account</a> |
+            <a href="BuySell.html">Buy/Sell</a> |
+            <a href="DepositWithdraw.html">Deposit/Withdraw</a> |
+            <a href="Portfolio.html" class="active-nav">Portfolio</a> |
+            <a href="History.html">Transaction History</a> 
+        </nav>
+    </header>
+
+    <main>
+        <!-- Page Title Box -->
+        <div class="page-title">
+            User Portfolio
+        </div>
+
+        <!-- Portfolio Container Box -->
+        <div class="container-box trade-container">
+            
+            <!-- Stat Card Summaries -->
+            <div class="stat-card-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Current Cash</div>
+                    <div class="stat-value" id="portfolioCash">$0.00</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Stock Value</div>
+                    <div class="stat-value" id="portfolioStockValue">$0.00</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Portfolio Value</div>
+                    <div class="stat-value" id="portfolioTotalValue">$0.00</div>
+                </div>
+            </div>
+
+            <!-- Holdings Table -->
+            <table class="trade-holdings-table" id="portfolioTable">
+                <thead>
+                    <tr>
+                        <th>Stock Name</th>
+                        <th>Shares</th>
+                        <th>Market Price</th>
+                        <th>Price Change</th>
+                        <th>Total Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Dynamically populated rows or empty state will go here -->
+                </tbody>
+            </table>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>Settings</p>
+        <p>Help</p>
+    </footer>
+
+    <!-- JavaScript to handle portfolio table-->
+    <script>
+        //  frontend function simulation to check portfolio data
+        function loadPortfolio(holdingsData) {
+            const tableBody = document.querySelector('#portfolioTable tbody');
+            tableBody.innerHTML = ''; // Clear table
+
+            if (!holdingsData || holdingsData.length === 0) {
+                // Display the empty state spanning across all 5 columns of the table
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="table-empty-state">
+                            No stocks in your portfolio currently
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            // If holdings exist, render them here...
+        }
+
+        // Run on page load (defaults to empty since account starts with no stocks)
+        window.onload = () => {
+            loadPortfolio([]); // Passing empty array to show the empty state message
+        };
+    </script>
+    
+</body>
+</html>

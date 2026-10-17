@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Change Market Hours - Admin - Stock Training System</title>
+    <link rel="stylesheet" href="AdminLayout.css">
+    <link rel="stylesheet" href="AdminStyles.css">
+</head>
+<body>
+
+    <!-- Website Banner -->
+    <header>
+        <h2>Stock Training System - Admin</h2>
+        <nav>
+            <a href="AdminStocks.html">Stocks</a> |
+            <a href="AdminMarketHours.html" class="active-nav">Change Market Hours</a> |
+            <a href="AdminMarketSchedule.html">Change Market Schedule</a>
+        </nav>
+    </header>
+
+    <main>
+        <!-- Page Title Box -->
+        <div class="page-title">
+            Change Market Hours
+        </div>
+
+        <!-- Container Box -->
+        <div class="container-box admin-container">
+            <form id="marketHoursForm">
+                <div class="form-group">
+                    <label for="openingHour">Market Opening Hour (0-23):</label>
+                    <select id="openingHour" required>
+                        <option value="">Select opening hour</option>
+                        <!-- JavaScript will populate hours 0 to 23 -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="closingHour">Market Closing Hour (0-23):</label>
+                    <select id="closingHour" required>
+                        <option value="">Select closing hour</option>
+                        <!-- JavaScript will populate hours 0 to 23 -->
+                    </select>
+                </div>
+                <div class="form-action-group" style="display: flex; gap: 10px; margin-top: 10px;">
+                    <button type="submit" class="action-btn">Update Hours</button>
+                    <button type="button" class="cancel-btn" id="clearMarketHoursBtn">Clear</button>
+                </div>
+            </form>
+            <!-- Dynamic message area for feedback -->
+            <div id="marketHoursMessageArea" class="message-area"></div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>Settings</p>
+        <p>Help</p>
+    </footer>
+
+    <!-- JavaScript to populate hours and validate selection -->
+    <script>
+        const openingSelect = document.getElementById('openingHour');
+        const closingSelect = document.getElementById('closingHour');
+
+        // Populate hours 00:00 to 23:00
+        for (let i = 0; i < 24; i++) {
+            const hourFormatted = i < 10 ? `0${i}` : `${i}`;
+            
+            const openOption = document.createElement('option');
+            openOption.value = i;
+            openOption.textContent = `${hourFormatted}:00`;
+            openingSelect.appendChild(openOption);
+
+            const closeOption = document.createElement('option');
+            closeOption.value = i;
+            closeOption.textContent = `${hourFormatted}:00`;
+            closingSelect.appendChild(closeOption);
+        }
+
+        const marketHoursForm = document.getElementById('marketHoursForm');
+        const marketHoursMessageArea = document.getElementById('marketHoursMessageArea');
+
+        marketHoursForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const openHour = parseInt(openingSelect.value);
+            const closeHour = parseInt(closingSelect.value);
+
+            if (isNaN(openHour) || isNaN(closeHour)) {
+                marketHoursMessageArea.textContent = 'Please select both opening and closing hours';
+                marketHoursMessageArea.className = 'message-area error';
+            } else if (openHour >= closeHour) {
+                marketHoursMessageArea.textContent = 'Opening hour must be earlier than closing hour';
+                marketHoursMessageArea.className = 'message-area error';
+            } else {
+                // Placeholder for backend integration
+                marketHoursMessageArea.textContent = 'Market hours updated successfully';
+                marketHoursMessageArea.className = 'message-area success';
+            }
+        });
+
+        // Clear button
+        document.getElementById('clearMarketHoursBtn').addEventListener('click', () => {
+            marketHoursForm.reset();
+            marketHoursMessageArea.className = 'message-area';
+            marketHoursMessageArea.textContent = '';
+        });
+    </script>
+
+</body>
+</html>
