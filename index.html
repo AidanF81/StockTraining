@@ -18,7 +18,7 @@
             <a href="BuySell.html">Buy/Sell</a> |
             <a href="DepositWithdraw.html">Deposit/Withdraw</a> |
             <a href="Portfolio.html">Portfolio</a> |
-            <a href="History.html">Transaction History</a> 
+            <a href="History.html">Transaction History</a>
         </nav>
     </header>
 
@@ -34,17 +34,19 @@
                 <legend class="login-legend">Enter Sign In Information</legend>
                 <form id="signInForm">
                     <div class="form-group">
-                        <label for="username">Username:</label>
-                        <input type="text" id="username" placeholder="Fill-in" required>
+                        <label for="email">Email Address:</label>
+                        <input type="email" id="email" placeholder="Fill-in" autocomplete="username" required>
                     </div>
                     <div class="form-group">
                         <label for="password">Password:</label>
-                        <input type="password" id="password" placeholder="Fill-in" required>
+                        <input type="password" id="password" placeholder="Fill-in" autocomplete="current-password" required>
                     </div>
                     <div class="form-action">
-                        <button type="submit">Sign In</button>
+                        <button type="submit" id="signInBtn">Sign In</button>
                     </div>
                 </form>
+                <!-- Dynamic message area for sign-in feedback -->
+                <div id="signInMessageArea" class="message-area"></div>
             </fieldset>
         </div>
     </main>
@@ -55,6 +57,51 @@
 		<p><a href="AdminStocks.html" style="text-decoration: none; color: inherit;">Admin</a></p>
 		<p>Help</p>
 	</footer>
-    
+
+    <!-- JavaScript: send the sign-in form to the API (POST /api/login) -->
+    <script>
+        const signInForm = document.getElementById('signInForm');
+        const signInBtn = document.getElementById('signInBtn');
+        const signInMessageArea = document.getElementById('signInMessageArea');
+
+        function showSignInMessage(text, type) {
+            signInMessageArea.textContent = text;
+            signInMessageArea.className = 'message-area ' + type;
+        }
+
+        signInForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+
+            if (!email || !password) {
+                showSignInMessage('Enter your email and password', 'error');
+                return;
+            }
+
+            signInBtn.disabled = true;
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    showSignInMessage(data.error || 'Sign in failed', 'error');
+                    return;
+                }
+
+                showSignInMessage(`Welcome back, ${data.user.firstName}. Loading your portfolio...`, 'success');
+                setTimeout(() => { window.location.href = 'Portfolio.html'; }, 900);
+            } catch (err) {
+                showSignInMessage('Could not reach the server. Is it running?', 'error');
+            } finally {
+                signInBtn.disabled = false;
+            }
+        });
+    </script>
+
 </body>
 </html>

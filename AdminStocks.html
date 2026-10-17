@@ -38,22 +38,22 @@
                 <form id="createStockForm">
                     <div class="form-group">
                         <label for="companyName">Company Name:</label>
-                        <input type="text" id="companyName" placeholder="Enter company name" required>
+                        <input type="text" id="companyName" placeholder="Enter company name" maxlength="255" required>
                     </div>
                     <div class="form-group">
                         <label for="stockTicker">Stock Ticker:</label>
-                        <input type="text" id="stockTicker" placeholder="e.g. AAPL" required>
+                        <input type="text" id="stockTicker" placeholder="e.g. AAPL" maxlength="10" required>
                     </div>
                     <div class="form-group">
                         <label for="stockVolume">Volume:</label>
-                        <input type="number" id="stockVolume" placeholder="Total initial shares" min="1" required>
+                        <input type="number" id="stockVolume" placeholder="Total initial shares" min="1" step="1" required>
                     </div>
                     <div class="form-group">
-                        <label for="initialPrice">Initial Price (\$):</label>
+                        <label for="initialPrice">Initial Price ($):</label>
                         <input type="number" id="initialPrice" placeholder="0.00" step="0.01" min="0.01" required>
                     </div>
                     <div class="form-action-group" style="display: flex; gap: 10px; margin-top: 20px;">
-                        <button type="submit" class="action-btn">Create Stock</button>
+                        <button type="submit" class="action-btn" id="createStockBtn">Create Stock</button>
                         <button type="button" class="cancel-btn" id="clearCreateStockBtn">Clear</button>
                     </div>
                 </form>
@@ -83,11 +83,12 @@
                     <tbody>
                         <tr>
                             <td colspan="6" class="table-empty-state">
-                                No stocks created currently
+                                Loading stocks...
                             </td>
                         </tr>
                     </tbody>
                 </table>
+                <div id="viewStocksMessageArea" class="message-area"></div>
             </div>
         </div>
     </main>
@@ -99,7 +100,7 @@
 		<p>Help</p>
 	</footer>
 
-    <!-- JavaScript to toggle Create / View Stocks views -->
+    <!-- JavaScript: toggle views, create stocks through the API, load the stock table from the database -->
     <script>
         const createBtn = document.getElementById('createStockModeBtn');
         const viewBtn = document.getElementById('viewStocksModeBtn');
@@ -114,32 +115,104 @@
             viewBtn.classList.remove('active-mode');
         });
 
-        // Toggle View Stocks View
+        // Toggle View Stocks View (reloads from the database each time)
         viewBtn.addEventListener('click', () => {
             createSection.style.display = 'none';
             viewSection.style.display = 'block';
             viewBtn.classList.add('active-mode');
             createBtn.classList.remove('active-mode');
+            loadStocks();
         });
 
-        // Create Stock Form Handling
+        const money = (n) => '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const whole = (n) => Number(n).toLocaleString('en-US');
+
+        // Load every stock from GET /api/stocks into the table
+        async function loadStocks() {
+            const tableBody = document.querySelector('#allStocksTable tbody');
+            const viewMessageArea = document.getElementById('viewStocksMessageArea');
+            viewMessageArea.className = 'message-area';
+
+            try {
+                const response = await fetch('/api/stocks');
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Failed to load stocks');
+
+                tableBody.innerHTML = '';
+                if (!data.stocks || data.stocks.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="6" class="table-empty-state">No stocks created currently</td></tr>';
+                    return;
+                }
+
+                for (const stock of data.stocks) {
+                    const initial = stock.InitialPrice != null ? stock.InitialPrice : stock.Price;
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td></td>
+                        <td></td>
+                        <td>${money(initial)}</td>
+                        <td>${money(stock.Price)}</td>
+                        <td>${whole(stock.Volume)}</td>
+                        <td>${money(Number(stock.Price) * Number(stock.Volume))}</td>
+                    `;
+                    // textContent for the free-text fields so company names render safely
+                    row.children[0].textContent = stock.CompanyName;
+                    row.children[1].textContent = stock.StockTicker;
+                    tableBody.appendChild(row);
+                }
+            } catch (err) {
+                tableBody.innerHTML = '<tr><td colspan="6" class="table-empty-state">Could not load stocks</td></tr>';
+                viewMessageArea.textContent = err.message;
+                viewMessageArea.className = 'message-area error';
+            }
+        }
+
+        // Create Stock Form -> POST /api/admin/stocks
         const createStockForm = document.getElementById('createStockForm');
+        const createStockBtn = document.getElementById('createStockBtn');
         const createStockMessageArea = document.getElementById('createStockMessageArea');
 
-        createStockForm.addEventListener('submit', (e) => {
+        function showCreateStockMessage(text, type) {
+            createStockMessageArea.textContent = text;
+            createStockMessageArea.className = 'message-area ' + type;
+        }
+
+        createStockForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const companyName = document.getElementById('companyName').value.trim();
-            const ticker = document.getElementById('stockTicker').value.trim();
+            const ticker = document.getElementById('stockTicker').value.trim().toUpperCase();
             const volume = document.getElementById('stockVolume').value;
             const price = document.getElementById('initialPrice').value;
 
             if (!companyName || !ticker || !volume || !price) {
-                createStockMessageArea.textContent = 'Please fill in all stock details';
-                createStockMessageArea.className = 'message-area error';
-            } else {
-                // Placeholder for backend success handling
-                createStockMessageArea.textContent = `Stock ${ticker.toUpperCase()} created successfully`;
-                createStockMessageArea.className = 'message-area success';
+                showCreateStockMessage('Please fill in all stock details', 'error');
+                return;
+            }
+
+            createStockBtn.disabled = true;
+            try {
+                const response = await fetch('/api/admin/stocks', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ companyName, ticker, volume, price })
+                });
+                const data = await response.json();
+
+                if (response.status === 401) {
+                    showCreateStockMessage('Please sign in first (Login page), then come back to create stocks', 'error');
+                    return;
+                }
+                if (!response.ok) {
+                    showCreateStockMessage(data.error || 'Stock creation failed', 'error');
+                    return;
+                }
+
+                showCreateStockMessage(data.message || `Stock ${ticker} created successfully`, 'success');
+                createStockForm.reset();
+            } catch (err) {
+                showCreateStockMessage('Could not reach the server. Is it running?', 'error');
+            } finally {
+                createStockBtn.disabled = false;
             }
         });
 

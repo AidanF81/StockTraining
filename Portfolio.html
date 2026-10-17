@@ -20,7 +20,7 @@
             <a href="BuySell.html">Buy/Sell</a> |
             <a href="DepositWithdraw.html">Deposit/Withdraw</a> |
             <a href="Portfolio.html" class="active-nav">Portfolio</a> |
-            <a href="History.html">Transaction History</a> 
+            <a href="History.html">Transaction History</a>
         </nav>
     </header>
 
@@ -28,11 +28,12 @@
         <!-- Page Title Box -->
         <div class="page-title">
             User Portfolio
+            <div id="signedInAs" style="font-size: 0.85rem; font-weight: normal; color: #64748b; margin-top: 4px;"></div>
         </div>
 
         <!-- Portfolio Container Box -->
         <div class="container-box trade-container">
-            
+
             <!-- Stat Card Summaries -->
             <div class="stat-card-grid">
                 <div class="stat-card">
@@ -61,9 +62,17 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <!-- Dynamically populated rows or empty state will go here -->
+                    <tr>
+                        <td colspan="5" class="table-empty-state">Loading portfolio...</td>
+                    </tr>
                 </tbody>
             </table>
+
+            <div id="portfolioMessageArea" class="message-area"></div>
+
+            <div style="margin-top: 20px; text-align: right;">
+                <button type="button" id="signOutBtn">Sign Out</button>
+            </div>
 
         </div>
     </main>
@@ -75,15 +84,15 @@
 		<p>Help</p>
 	</footer>
 
-    <!-- JavaScript to handle portfolio table-->
+    <!-- JavaScript: check sign-in (GET /api/me) and load holdings (GET /api/portfolio) -->
     <script>
-        //  frontend function simulation to check portfolio data
-        function loadPortfolio(holdingsData) {
-            const tableBody = document.querySelector('#portfolioTable tbody');
-            tableBody.innerHTML = ''; // Clear table
+        const money = (n) => '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-            if (!holdingsData || holdingsData.length === 0) {
-                // Display the empty state spanning across all 5 columns of the table
+        function renderHoldings(holdings) {
+            const tableBody = document.querySelector('#portfolioTable tbody');
+            tableBody.innerHTML = '';
+
+            if (!holdings || holdings.length === 0) {
                 tableBody.innerHTML = `
                     <tr>
                         <td colspan="5" class="table-empty-state">
@@ -94,14 +103,56 @@
                 return;
             }
 
-            // If holdings exist, render them here...
+            for (const h of holdings) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td></td>
+                    <td>${Number(h.SharesOwned).toLocaleString('en-US')}</td>
+                    <td>${money(h.Price)}</td>
+                    <td>--</td>
+                    <td>${money(h.TotalValue)}</td>
+                `;
+                row.children[0].textContent = `${h.StockTicker} (${h.CompanyName})`;
+                tableBody.appendChild(row);
+            }
         }
 
-        // Run on page load (defaults to empty since account starts with no stocks)
-        window.onload = () => {
-            loadPortfolio([]); // Passing empty array to show the empty state message
-        };
+        async function loadPortfolio() {
+            const messageArea = document.getElementById('portfolioMessageArea');
+            try {
+                // 1. Who is signed in? If nobody, go to the sign-in page.
+                const meResponse = await fetch('/api/me');
+                if (meResponse.status === 401) {
+                    window.location.href = 'index.html';
+                    return;
+                }
+                const me = await meResponse.json();
+                document.getElementById('signedInAs').textContent =
+                    `Signed in as ${me.user.firstName} ${me.user.lastName} (${me.user.email})`;
+
+                // 2. Load holdings and totals.
+                const response = await fetch('/api/portfolio');
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Failed to load portfolio');
+
+                document.getElementById('portfolioCash').textContent = money(data.cash);
+                document.getElementById('portfolioStockValue').textContent = money(data.stockValue);
+                document.getElementById('portfolioTotalValue').textContent = money(data.totalValue);
+                renderHoldings(data.holdings);
+            } catch (err) {
+                renderHoldings([]);
+                messageArea.textContent = err.message || 'Could not reach the server';
+                messageArea.className = 'message-area error';
+            }
+        }
+
+        document.getElementById('signOutBtn').addEventListener('click', async () => {
+            await fetch('/api/logout', { method: 'POST' });
+            window.location.href = 'index.html';
+        });
+
+        window.onload = loadPortfolio;
     </script>
-    
+
 </body>
 </html>
