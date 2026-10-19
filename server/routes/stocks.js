@@ -104,8 +104,17 @@ router.get('/portfolio', requireLogin, async (req, res) => {
             [req.session.user.email]
         );
         const stockValue = rows.reduce((sum, r) => sum + Number(r.TotalValue || 0), 0);
-        // Cash balance column does not exist yet (see schema_updates.sql); report 0 until it does.
-        res.json({ holdings: rows, cash: 0, stockValue, totalValue: stockValue });
+
+        let cash = 0;
+        try {
+            const [acct] = await db.query('SELECT Balance FROM UserAccount WHERE Email = ? LIMIT 1', [req.session.user.email]);
+            cash = acct[0] ? Number(acct[0].Balance || 0) : 0;
+        } catch (err) {
+            if (err.code !== 'ER_BAD_FIELD_ERROR') throw err;
+            console.warn('[portfolio] Balance column not found; reporting $0 cash');
+        }
+
+        res.json({ holdings: rows, cash, stockValue, totalValue: cash + stockValue });
     } catch (err) {
         console.error('[portfolio]', err);
         res.status(500).json({ error: 'Database error while loading the portfolio' });

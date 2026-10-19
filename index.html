@@ -93,8 +93,11 @@
                     return;
                 }
 
-                showSignInMessage(`Welcome back, ${data.user.firstName}. Loading your portfolio...`, 'success');
-                setTimeout(() => { window.location.href = 'Portfolio.html'; }, 900);
+                // Admins go to the admin tools, everyone else to their portfolio.
+                const destination = data.user.isAdmin ? 'AdminStocks.html' : 'Portfolio.html';
+                const where = data.user.isAdmin ? 'admin tools' : 'your portfolio';
+                showSignInMessage(`Welcome back, ${data.user.firstName}. Loading ${where}...`, 'success');
+                setTimeout(() => { window.location.href = destination; }, 900);
             } catch (err) {
                 showSignInMessage('Could not reach the server. Is it running?', 'error');
             } finally {

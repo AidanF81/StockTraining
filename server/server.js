@@ -13,6 +13,7 @@ const session = require('express-session');
 const db = require('./db');
 const authRoutes = require('./routes/auth');
 const stockRoutes = require('./routes/stocks');
+const cashRoutes = require('./routes/cash');
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -48,6 +49,7 @@ app.get('/api/health', async (req, res) => {
 
 app.use('/api', authRoutes);
 app.use('/api', stockRoutes);
+app.use('/api', cashRoutes);
 
 app.use('/api', (req, res) => {
     res.status(404).json({ error: `No API route for ${req.method} ${req.path}` });
@@ -68,6 +70,6 @@ app.listen(PORT, () => {
     console.log(`Stock Training System server listening on port ${PORT}`);
     console.log(`Pages served from ${SITE_ROOT}`);
     db.query('SELECT 1')
-        .then(() => console.log('[db] Connected to', process.env.DB_HOST))
+        .then(() => console.log(`[db] Connected to ${process.env.DB_HOST}, database "${db.name()}"`))
         .catch((err) => console.warn('[db] Not connected yet:', err.code || err.message));
 });

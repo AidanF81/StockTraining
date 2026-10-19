@@ -128,7 +128,7 @@
                 }
                 const me = await meResponse.json();
                 document.getElementById('signedInAs').textContent =
-                    `Signed in as ${me.user.firstName} ${me.user.lastName} (${me.user.email})`;
+                    `Signed in as ${me.user.firstName} ${me.user.lastName} (${me.user.email})` + (me.user.isAdmin ? ' [Admin]' : '');
 
                 // 2. Load holdings and totals.
                 const response = await fetch('/api/portfolio');
