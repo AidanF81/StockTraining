@@ -1,11 +1,15 @@
 // Stock routes: list/search stocks, admin create stock, user portfolio.
 // Tables used:
-//   Stocks        (StockTicker PK, CompanyName, Volume, Price)
+//   Stocks        (StockTicker PK, CompanyName, Volume, Price, InitialPrice)
 //   UserStockInfo (Email FK + StockTicker FK, SharesOwned)
+//
+// Price is the current price (the price generator moves it). InitialPrice is what the
+// admin typed in when the stock was created and never changes.
 
 const router = require('express').Router();
 const db = require('../db');
 const { requireLogin, requireAdmin } = require('../middleware/auth');
+const { averageCosts } = require('../history');
 
 // GET /api/stocks            -> all stocks
 // GET /api/stocks?q=app      -> stocks whose ticker or company name contains "app"
@@ -54,7 +58,7 @@ router.post('/admin/stocks', requireAdmin, async (req, res) => {
     const cleanTicker = String(ticker || '').trim().toUpperCase();
     const cleanName = String(companyName || '').trim();
     const volumeNum = Number(volume);
-    const priceNum = Number(price);
+    const priceNum = Math.round(Number(price) * 100) / 100;
 
     if (!cleanTicker || !cleanName || !volume || !price) {
         return res.status(400).json({ error: 'Please fill in all stock details' });
@@ -71,11 +75,17 @@ router.post('/admin/stocks', requireAdmin, async (req, res) => {
     if (!Number.isFinite(priceNum) || priceNum <= 0) {
         return res.status(400).json({ error: 'Price must be greater than 0' });
     }
+    if (priceNum > 99999999.99) {
+        return res.status(400).json({ error: 'Price is too large' });
+    }
+    if (volumeNum > 2000000000) {
+        return res.status(400).json({ error: 'Volume is too large' });
+    }
 
     try {
         await db.query(
-            'INSERT INTO Stocks (StockTicker, CompanyName, Volume, Price) VALUES (?, ?, ?, ?)',
-            [cleanTicker, cleanName, volumeNum, priceNum]
+            'INSERT INTO Stocks (StockTicker, CompanyName, Volume, Price, InitialPrice) VALUES (?, ?, ?, ?, ?)',
+            [cleanTicker, cleanName, volumeNum, priceNum, priceNum]
         );
         const [rows] = await db.query(
             'SELECT * FROM Stocks WHERE StockTicker = ?',
@@ -91,7 +101,7 @@ router.post('/admin/stocks', requireAdmin, async (req, res) => {
     }
 });
 
-// GET /api/portfolio -> the signed-in user's holdings joined to current prices
+// GET /api/portfolio -> the signed-in user's holdings joined to current prices, plus cash and totals
 router.get('/portfolio', requireLogin, async (req, res) => {
     try {
         const [rows] = await db.query(
@@ -104,6 +114,15 @@ router.get('/portfolio', requireLogin, async (req, res) => {
             [req.session.user.email]
         );
         const stockValue = rows.reduce((sum, r) => sum + Number(r.TotalValue || 0), 0);
+
+        // Average cost comes from the users buy/sell history. PriceChange is current price minus what they paid.
+        const costs = await averageCosts(req.session.user.email);
+        for (const r of rows) {
+            const avg = costs[r.StockTicker];
+            r.AvgCost = avg === undefined ? null : avg;
+            r.PriceChange = avg === undefined ? null : Math.round((Number(r.Price) - avg) * 100) / 100;
+            r.PriceChangePercent = avg ? Math.round(((Number(r.Price) - avg) / avg) * 10000) / 100 : null;
+        }
 
         let cash = 0;
         try {

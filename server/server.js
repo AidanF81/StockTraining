@@ -14,6 +14,8 @@ const db = require('./db');
 const authRoutes = require('./routes/auth');
 const stockRoutes = require('./routes/stocks');
 const cashRoutes = require('./routes/cash');
+const tradeRoutes = require('./routes/trade');
+const marketRoutes = require('./routes/market');
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -50,6 +52,8 @@ app.get('/api/health', async (req, res) => {
 app.use('/api', authRoutes);
 app.use('/api', stockRoutes);
 app.use('/api', cashRoutes);
+app.use('/api', tradeRoutes);
+app.use('/api', marketRoutes);
 
 app.use('/api', (req, res) => {
     res.status(404).json({ error: `No API route for ${req.method} ${req.path}` });
@@ -57,7 +61,7 @@ app.use('/api', (req, res) => {
 
 // --- Static pages (the HTML/CSS files in the repo root) ---
 // Never serve the server code, secrets, keys, or git data.
-const BLOCKED = /(^|\/)(server|node_modules|\.git)(\/|$)|\.(pem|env|md|sql|json)$/i;
+const BLOCKED = /(^|\/)(server|node_modules|\.git)(\/|$)|\.(pem|env|md|sql|json|py|txt)$/i;
 app.use((req, res, next) => {
     if (BLOCKED.test(req.path)) return res.status(404).send('Not found');
     next();

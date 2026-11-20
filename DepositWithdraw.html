@@ -90,8 +90,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <!-- Filled in this session as deposits/withdrawals happen.
-                             Loading past transactions needs the CashTransaction table (see server/schema_updates.sql). -->
+                        <!-- Filled by JavaScript from GET /api/cash/history -->
                         <tr>
                             <td colspan="4" class="table-empty-state">
                                 No recent cash transactions currently
@@ -111,7 +110,7 @@
 		<p>Help</p>
 	</footer>
 
-    <!-- JavaScript: deposit/withdraw through the API (POST /api/deposit, POST /api/withdraw) -->
+    <!-- JavaScript: deposit/withdraw through the API (POST /api/deposit, POST /api/withdraw, GET /api/cash/history) -->
     <script>
         const depositBtn = document.getElementById('depositModeBtn');
         const withdrawBtn = document.getElementById('withdrawModeBtn');
@@ -135,24 +134,38 @@
         const money = (n) => '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         const balanceDisplay = document.getElementById('availableCashBalance');
         const txBody = document.querySelector('#cashTransactionsTable tbody');
-        let sessionTxCount = 0;
 
         function showMessage(area, text, type) {
             area.textContent = text;
             area.className = 'message-area ' + type;
         }
 
-        function addTransactionRow(type, amount, balanceAfter) {
-            if (sessionTxCount === 0) txBody.innerHTML = '';
-            sessionTxCount++;
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${new Date().toLocaleString()}</td>
-                <td>${type}</td>
-                <td>${money(amount)}</td>
-                <td>${money(balanceAfter)}</td>
-            `;
-            txBody.prepend(row);
+        // Fill the "Recent cash transactions" table from the database (deposits and withdrawals, newest first)
+        async function loadCashHistory() {
+            try {
+                const response = await fetch('/api/cash/history');
+                const data = await response.json();
+                if (!response.ok) return;
+
+                txBody.innerHTML = '';
+                if (!data.history || data.history.length === 0) {
+                    txBody.innerHTML = '<tr><td colspan="4" class="table-empty-state">No recent cash transactions currently</td></tr>';
+                    return;
+                }
+                for (const t of data.history) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${t.time ? new Date(t.time).toLocaleString() : '--'}</td>
+                        <td></td>
+                        <td>${money(Math.abs(t.cashChange))}</td>
+                        <td>${money(t.newBalance)}</td>
+                    `;
+                    row.children[1].textContent = t.type;
+                    txBody.appendChild(row);
+                }
+            } catch (err) {
+                // the balance still shows, so leave the table as it is
+            }
         }
 
         // Load the signed-in user and their balance. Not signed in -> go to the sign-in page.
@@ -171,6 +184,7 @@
                 const data = await response.json();
                 if (!response.ok) throw new Error(data.error || 'Failed to load balance');
                 balanceDisplay.textContent = money(data.balance);
+                await loadCashHistory();
             } catch (err) {
                 showMessage(document.getElementById('depositMessageArea'), err.message || 'Could not reach the server', 'error');
             }
@@ -196,7 +210,7 @@
                 }
 
                 balanceDisplay.textContent = money(data.balance);
-                addTransactionRow(label, data.amount, data.balance);
+                await loadCashHistory();
                 showMessage(messageArea, data.message || `${label} complete`, 'success');
             } catch (err) {
                 showMessage(messageArea, 'Could not reach the server. Is it running?', 'error');

@@ -51,21 +51,25 @@
             <table class="trade-holdings-table" id="transactionHistoryTable">
                 <thead>
                     <tr>
+                        <th>Date</th>
+                        <th>Type</th>
                         <th>Stock Name</th>
-                        <th>Shares Bought</th>
-                        <th>Market Price When Sold</th>
+                        <th>Shares</th>
+                        <th>Market Price</th>
                         <th>Change in Cash</th>
-                        <th>Change in Portfolio Value</th>
+                        <th>Cash After</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td colspan="5" class="table-empty-state">
-                            No transaction history currently
+                        <td colspan="7" class="table-empty-state">
+                            Loading transaction history...
                         </td>
                     </tr>
                 </tbody>
             </table>
+
+            <div id="historyMessageArea" class="message-area"></div>
 
         </div>
     </main>
@@ -77,8 +81,66 @@
 		<p>Help</p>
 	</footer>
 
+    <!-- JavaScript: load totals (GET /api/portfolio) and every transaction (GET /api/history) -->
     <script>
-        // Backend/Database integration will populate transaction records here.
+        const money = (n) => '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const signedMoney = (n) => (Number(n) < 0 ? '-' : '+') + money(Math.abs(Number(n)));
+
+        function renderHistory(history) {
+            const tableBody = document.querySelector('#transactionHistoryTable tbody');
+            tableBody.innerHTML = '';
+
+            if (!history || history.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="7" class="table-empty-state">No transaction history currently</td></tr>';
+                return;
+            }
+
+            for (const t of history) {
+                const row = document.createElement('tr');
+                // Deposits and withdrawals have no stock, shares or price
+                row.innerHTML = `
+                    <td>${t.time ? new Date(t.time).toLocaleString() : '--'}</td>
+                    <td></td>
+                    <td></td>
+                    <td>${t.shares == null ? '--' : Number(t.shares).toLocaleString('en-US')}</td>
+                    <td>${t.pricePerShare == null ? '--' : money(t.pricePerShare)}</td>
+                    <td class="${t.cashChange < 0 ? 'text-loss' : 'text-gain'}">${signedMoney(t.cashChange)}</td>
+                    <td>${money(t.newBalance)}</td>
+                `;
+                // textContent so names render safely
+                row.children[1].textContent = t.type;
+                row.children[2].textContent = t.ticker ? `${t.ticker} (${t.companyName || t.ticker})` : '--';
+                tableBody.appendChild(row);
+            }
+        }
+
+        async function loadHistory() {
+            const messageArea = document.getElementById('historyMessageArea');
+            try {
+                // Not signed in -> go to the sign-in page.
+                const portfolioResponse = await fetch('/api/portfolio');
+                if (portfolioResponse.status === 401) {
+                    window.location.href = 'index.html';
+                    return;
+                }
+                const portfolio = await portfolioResponse.json();
+                if (!portfolioResponse.ok) throw new Error(portfolio.error || 'Failed to load totals');
+                document.getElementById('historyCash').textContent = money(portfolio.cash);
+                document.getElementById('historyStockValue').textContent = money(portfolio.stockValue);
+                document.getElementById('historyTotalValue').textContent = money(portfolio.totalValue);
+
+                const response = await fetch('/api/history');
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Failed to load transaction history');
+                renderHistory(data.history);
+            } catch (err) {
+                renderHistory([]);
+                messageArea.textContent = err.message || 'Could not reach the server';
+                messageArea.className = 'message-area error';
+            }
+        }
+
+        window.onload = loadHistory;
     </script>
     
 </body>

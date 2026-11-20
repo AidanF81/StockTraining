@@ -27,6 +27,7 @@
 
         <!-- Container Box -->
         <div class="container-box admin-container">
+            <p id="currentHoursText" style="margin-bottom: 15px; font-weight: bold;">Current market hours: loading...</p>
             <form id="marketHoursForm">
                 <div class="form-group">
                     <label for="openingHour">Market Opening Hour (0-23):</label>
@@ -59,7 +60,7 @@
 		<p>Help</p>
 	</footer>
 
-    <!-- JavaScript to populate hours and validate selection -->
+    <!-- JavaScript: show the current hours (GET /api/market/status) and save new ones (POST /api/admin/market/hours) -->
     <script>
         const openingSelect = document.getElementById('openingHour');
         const closingSelect = document.getElementById('closingHour');
@@ -82,21 +83,66 @@
         const marketHoursForm = document.getElementById('marketHoursForm');
         const marketHoursMessageArea = document.getElementById('marketHoursMessageArea');
 
-        marketHoursForm.addEventListener('submit', (e) => {
+        function showMessage(text, type) {
+            marketHoursMessageArea.textContent = text;
+            marketHoursMessageArea.className = 'message-area ' + type;
+        }
+
+        // Show the hours that are saved now and pick them in the dropdowns
+        async function loadCurrentHours() {
+            const currentHoursText = document.getElementById('currentHoursText');
+            try {
+                const response = await fetch('/api/market/status');
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Failed to load market hours');
+                currentHoursText.textContent =
+                    `Current market hours: ${data.openingTime.slice(0, 5)} to ${data.closingTime.slice(0, 5)} (${data.timeZone}). ` +
+                    `Market is ${data.open ? 'OPEN' : 'CLOSED'} right now.`;
+                openingSelect.value = String(Number(data.openingTime.slice(0, 2)));
+                closingSelect.value = String(Number(data.closingTime.slice(0, 2)));
+            } catch (err) {
+                currentHoursText.textContent = 'Current market hours: could not load';
+            }
+        }
+
+        marketHoursForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const openHour = parseInt(openingSelect.value);
             const closeHour = parseInt(closingSelect.value);
 
             if (isNaN(openHour) || isNaN(closeHour)) {
-                marketHoursMessageArea.textContent = 'Please select both opening and closing hours';
-                marketHoursMessageArea.className = 'message-area error';
-            } else if (openHour >= closeHour) {
-                marketHoursMessageArea.textContent = 'Opening hour must be earlier than closing hour';
-                marketHoursMessageArea.className = 'message-area error';
-            } else {
-                // Placeholder for backend integration
-                marketHoursMessageArea.textContent = 'Market hours updated successfully';
-                marketHoursMessageArea.className = 'message-area success';
+                showMessage('Please select both opening and closing hours', 'error');
+                return;
+            }
+            if (openHour >= closeHour) {
+                showMessage('Opening hour must be earlier than closing hour', 'error');
+                return;
+            }
+
+            const button = marketHoursForm.querySelector('.action-btn');
+            button.disabled = true;
+            try {
+                const response = await fetch('/api/admin/market/hours', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ openingHour: openHour, closingHour: closeHour })
+                });
+                const data = await response.json();
+
+                if (response.status === 401) {
+                    showMessage('Please sign in as an admin first (Login page), then come back', 'error');
+                    return;
+                }
+                if (!response.ok) {
+                    showMessage(data.error || 'Market hours were not updated', 'error');
+                    return;
+                }
+                showMessage(data.message || 'Market hours updated successfully', 'success');
+                await loadCurrentHours();
+            } catch (err) {
+                showMessage('Could not reach the server. Is it running?', 'error');
+            } finally {
+                button.disabled = false;
             }
         });
 
@@ -106,6 +152,8 @@
             marketHoursMessageArea.className = 'message-area';
             marketHoursMessageArea.textContent = '';
         });
+
+        loadCurrentHours();
     </script>
 
 </body>

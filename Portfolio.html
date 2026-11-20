@@ -109,10 +109,21 @@
                     <td></td>
                     <td>${Number(h.SharesOwned).toLocaleString('en-US')}</td>
                     <td>${money(h.Price)}</td>
-                    <td>--</td>
+                    <td></td>
                     <td>${money(h.TotalValue)}</td>
                 `;
                 row.children[0].textContent = `${h.StockTicker} (${h.CompanyName})`;
+
+                // Price Change = current market price compared to the average price the user paid
+                const change = row.children[3];
+                if (h.PriceChange == null) {
+                    change.textContent = '--';
+                } else {
+                    const sign = h.PriceChange < 0 ? '-' : '+';
+                    change.textContent = `${sign}${money(Math.abs(h.PriceChange))} (${sign}${Math.abs(h.PriceChangePercent).toFixed(2)}%)`;
+                    change.className = h.PriceChange < 0 ? 'text-loss' : 'text-gain';
+                    change.title = `Average cost ${money(h.AvgCost)} per share`;
+                }
                 tableBody.appendChild(row);
             }
         }

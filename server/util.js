@@ -14,4 +14,15 @@ function parseAmount(raw) {
     return Math.round(n * 100) / 100;
 }
 
-module.exports = { isTrue, parseAmount };
+// Parse a number of shares from a form. Returns a whole number of 1 or more, or null if invalid.
+function parseShares(raw) {
+    if (raw === '' || raw === null || raw === undefined || typeof raw === 'boolean') return null;
+    const n = Number(raw);
+    if (!Number.isInteger(n) || n < 1 || n > 1000000) return null;
+    return n;
+}
+
+// Balance is DECIMAL(10,2) so the most it can hold is 99,999,999.99
+const MAX_BALANCE_CENTS = 9999999999;
+
+module.exports = { isTrue, parseAmount, parseShares, MAX_BALANCE_CENTS };

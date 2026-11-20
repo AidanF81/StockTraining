@@ -3,7 +3,7 @@
 Node.js + Express API that connects Aidan's pages to Chad's RDS database.
 IFT 401 Capstone, Feeley / Foster / Frazier.
 
-## What works right now (mid-build functions)
+## What works right now
 
 | Function | Page | API route | Table |
 |---|---|---|---|
@@ -12,8 +12,16 @@ IFT 401 Capstone, Feeley / Foster / Frazier.
 | Admin Create Stock | AdminStocks.html | POST /api/admin/stocks | Stocks |
 | View Stocks | AdminStocks.html (View tab) | GET /api/stocks | Stocks |
 | View Portfolio | Portfolio.html | GET /api/portfolio | UserStockInfo + Stocks + UserAccount.Balance |
-| Deposit Cash | DepositWithdraw.html | POST /api/deposit | UserAccount.Balance |
-| Withdraw Cash | DepositWithdraw.html | POST /api/withdraw | UserAccount.Balance |
+| Deposit Cash | DepositWithdraw.html | POST /api/deposit | UserAccount.Balance + UserHistory |
+| Withdraw Cash | DepositWithdraw.html | POST /api/withdraw | UserAccount.Balance + UserHistory |
+| Cash history | DepositWithdraw.html | GET /api/cash/history | UserHistory |
+| Buy Stock | BuySell.html | POST /api/buy | UserAccount + Stocks + UserStockInfo + UserHistory |
+| Sell Stock | BuySell.html | POST /api/sell | UserAccount + Stocks + UserStockInfo + UserHistory |
+| Transaction History | History.html | GET /api/history | UserHistory |
+| Market open or closed | BuySell.html | GET /api/market/status | MarketHours + MarketSchedule |
+| Admin Change Market Hours | AdminMarketHours.html | POST /api/admin/market/hours | MarketHours |
+| Admin Change Market Schedule | AdminMarketSchedule.html | GET and POST /api/admin/market/schedule | MarketSchedule |
+| Random price generator | (runs on the server) | price_generator.py | Stocks.Price |
 
 How the pieces fit:
 
@@ -27,9 +35,28 @@ How the pieces fit:
 - **Admins** are rows with IsAdmin = 1. At sign-up, entering the default admin account's
   password (Admin@admin.com) in the "Admin Password" box creates an admin account. The
   admin API routes return 403 for anyone else. ADMIN_EMAILS in .env can add extra admins.
-- **Deposit / Withdraw** add to or subtract from UserAccount.Balance. Withdraw refuses to
-  go below zero. Balance is an INT right now, so cents are rounded; block 1 of
-  schema_updates.sql fixes that.
+- **Deposit / Withdraw** add to or subtract from UserAccount.Balance and save a row in
+  UserHistory (type Deposit or Withdraw, no ticker or shares). Withdraw refuses to go
+  below zero.
+- **Buy / Sell** use the current price in Stocks. Each order runs in one database
+  transaction: the balance, the shares in UserStockInfo and the UserHistory row are all
+  saved together or not at all. Buying needs enough cash, selling needs enough shares,
+  and both are refused while the market is closed.
+- **UserHistory** has no price column. For a buy or sell the price per share is the
+  change in cash (NewBalance minus PreviousBalance) divided by Shares.
+- **Market hours** are one row in MarketHours. If the table is empty the hours are
+  09:00 to 16:00. Times are in the MARKET_TZ time zone from .env (default
+  America/Phoenix) because the EC2 clock is UTC.
+- **Market schedule**: Saturday and Sunday are closed and weekdays are open, unless the
+  admin saved that date in MarketSchedule. IsOpen is BINARY(1) holding the character
+  '1' or '0'. The closure reason is not stored: Saturday or Sunday is "Weekend", any
+  other closed day is "Holiday".
+- **Price generator** (Python): every 30 seconds while the market is open, each stock
+  price moves up or down by up to 1.5%. Prices stay between half and double the
+  InitialPrice. It asks the Node server if the market is open, so the rule lives in
+  one place.
+- **Portfolio "Price Change"** is the current price compared to the average price the
+  user paid, worked out from their buys in UserHistory.
 
 ## Files
 
@@ -37,14 +64,21 @@ How the pieces fit:
 server/
   server.js             Express app: API under /api, pages served from repo root
   db.js                 MySQL pool. Finds the database automatically if DB_NAME is blank
-  util.js               small helpers (boolean parsing, money parsing)
+  util.js               small helpers (boolean parsing, money and share parsing)
+  market.js             works out if the market is open (hours, weekends, holidays)
+  history.js            reads UserHistory: transaction list and average cost
   routes/auth.js        register / login / logout / me
   routes/stocks.js      list, search, create stocks; portfolio
-  routes/cash.js        balance, deposit, withdraw
+  routes/cash.js        balance, deposit, withdraw, cash history
+  routes/trade.js       buy, sell, transaction history
+  routes/market.js      market status; admin market hours and schedule
   middleware/auth.js    requireLogin / requireAdmin
+  price_generator.py    Python random price generator (runs under pm2)
+  requirements.txt      Python package the price generator needs
   scripts/inspect-db.js prints every database, table and column (good for the demo)
+  scripts/apply-schema-changes.js  the three table changes made on Nov 20 (already applied)
   .env.example          copy to .env and fill in
-  schema_updates.sql    recommended table changes for Chad (not needed for mid-build)
+  schema_updates.sql    record of the table changes (what was applied and what was not)
 ```
 
 ## Step 1. Code into the repo (your PC)
@@ -104,19 +138,48 @@ pm2 startup          # prints one command; copy and run it
 
 `pm2 logs sts` shows the server output. `pm2 restart sts` after a `git pull`.
 
+## Step 5. Start the price generator (Python)
+
+One time setup:
+
+```
+cd ~/StockTraining/server
+sudo dnf install -y python3-pip
+pip3 install --user -r requirements.txt
+python3 price_generator.py --once     # one round, prints the old and new prices
+```
+
+If the market is closed it prints "market closed" and changes nothing. Then keep it
+running next to the server:
+
+```
+pm2 start price_generator.py --name prices --interpreter python3
+pm2 save
+```
+
+`pm2 logs prices` shows every price change. `pm2 stop prices` pauses it (useful in the
+video when you want a price to hold still).
+
 ## Demo flow for the video
 
 1. Show the AWS console: EC2 instance (Aidan) and RDS instance (Chad).
 2. Show the GitHub repo and the `server/` code.
-3. Create Account: register a regular user. Show the row appear in UserAccount
-   (MySQL Workbench, or `node scripts/inspect-db.js`). Point out PasswordHash.
-4. Login: wrong password first (error), then correct. Lands on Portfolio with
-   "Signed in as ...", cash $0.00.
-5. Deposit $1,000. Withdraw $1,500 (Insufficient funds). Withdraw $250. Balance $750.
-   Portfolio now shows $750 cash.
-6. Sign out. Sign in as Admin@admin.com. Lands on the admin page.
-   Create two stocks. View Stocks tab lists them from the database.
-7. Show that a regular user who tries to create a stock gets "Admin access required".
+3. Create Account, then Login (wrong password first, then correct).
+4. Deposit $1,000. Withdraw $1,500 (Insufficient funds). Withdraw $250. The table under
+   the form shows both transactions, and they are still there after a refresh.
+5. Buy/Sell: search for a stock, select it, buy 2 shares. Try to buy more than the cash
+   allows (Insufficient funds). Cancel an order before sending it.
+6. Switch to Sell: the holding shows average cost and current price. Sell 1 share. Try
+   to sell more than you own.
+7. Portfolio: shares, market price, price change and totals.
+8. Transaction History: every deposit, withdrawal, buy and sell with date and balance.
+9. Price generator: `pm2 logs prices` in the SSH window, then refresh the Buy/Sell page
+   and show the price changed (the page also refreshes itself every 15 seconds).
+10. Sign in as an admin. Create a stock. Change Market Hours so the market is closed
+    right now, go back to Buy/Sell as the user and show the order is refused. Set the
+    hours back.
+11. Change Market Schedule: mark a weekday closed (Holiday), show it turn red.
+12. Show that a regular user gets "Admin access required" on an admin page.
 
 ## Troubleshooting
 
@@ -129,9 +192,7 @@ pm2 startup          # prints one command; copy and run it
 | `ER_BAD_FIELD_ERROR` mentioning Balance or IsAdmin | Chad's columns are not there; the server falls back to regular accounts and $0 cash |
 | Page says "Could not reach the server" | Node is not running, or nginx is not proxying to port 3000 |
 | Sign-in page still asks for "Username" | nginx is serving the old static files instead of proxying to Node |
-| Prices or balances lose cents | INT columns. Chad runs block 1 of `schema_updates.sql` |
-
-## Next (after mid-build)
-
-Run `schema_updates.sql` (Chad), then add buy/sell, transaction history, market
-hours/schedule, and the Python random price generator.
+| Buy/Sell says "Market is closed" | Outside market hours, a weekend, or a day the admin closed. Check the Change Market Hours page; hours are in MARKET_TZ |
+| `python3 price_generator.py` says `No module named 'pymysql'` | run `pip3 install --user -r requirements.txt` |
+| Price generator says `skipped this round: URLError` | the Node server is not running (`pm2 restart sts`) |
+| Price generator says `cryptography package is required` | install with the requirements file, it includes that package |

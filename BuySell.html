@@ -44,10 +44,13 @@
                     <input type="text" id="searchStocks" placeholder="Enter ticker or company name">
                 </div>
 
+                <!-- Search results, filled by JavaScript. Click a stock to select it. -->
+                <div id="stockSearchResults" style="max-height: 180px; overflow-y: auto; border: 1px solid #cbd5e1; border-radius: 6px; margin-bottom: 15px;"></div>
+
                 <div class="stock-info-display" style="background-color: #f8fafc; padding: 12px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #cbd5e1;">
                     <p style="margin: 5px 0;"><strong>Selected stock:</strong> <span id="selectedBuyStock">None selected</span></p>
                     <p style="margin: 5px 0;"><strong>Current price:</strong> <span id="buyCurrentPrice">--</span></p>
-                    <p style="margin: 5px 0;"><strong>Market:</strong> <span id="marketStatus" class="status-badge open">OPEN</span></p>
+                    <p style="margin: 5px 0;"><strong>Market:</strong> <span id="marketStatus" class="status-badge closed">...</span> <span id="marketDetail" style="font-size: 0.85rem; color: #64748b;"></span></p>
                 </div>
 
                 <form id="buyForm">
@@ -135,6 +138,8 @@
 		<p>Help</p>
 	</footer>
 
+   <!-- JavaScript: search stocks, buy and sell through the API
+        (GET /api/stocks, GET /api/portfolio, GET /api/market/status, POST /api/buy, POST /api/sell) -->
    <script>
         const buyBtn = document.getElementById('buyModeBtn');
         const sellBtn = document.getElementById('sellModeBtn');
@@ -158,35 +163,298 @@
             pageTitleHeading.textContent = 'Portfolio';
         });
 
+        const money = (n) => '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const whole = (n) => Number(n).toLocaleString('en-US');
+
+        // What the page currently knows. Refreshed from the server every 15 seconds
+        // so price changes from the price generator show up without reloading.
+        let stocks = [];          // search results
+        let holdings = [];        // what the user owns
+        let cash = 0;
+        let buyTicker = null;     // ticker picked on the Buy side
+        let buyStock = null;      // that stock with its latest price
+        let sellTicker = null;    // ticker picked on the Sell side
+
         const buyForm = document.getElementById('buyForm');
-        const buyMessageArea = document.getElementById('buyMessageArea');
-        const selectedBuyStock = document.getElementById('selectedBuyStock');
-
-        buyForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            if (selectedBuyStock.textContent === 'None selected' || selectedBuyStock.textContent.trim() === '') {
-                buyMessageArea.textContent = 'No stock selected';
-                buyMessageArea.className = 'message-area error';
-            } else {
-                buyMessageArea.textContent = 'Order complete';
-                buyMessageArea.className = 'message-area success';
-            }
-        });
-
         const sellForm = document.getElementById('sellForm');
+        const buyMessageArea = document.getElementById('buyMessageArea');
         const sellMessageArea = document.getElementById('sellMessageArea');
-        const selectedSellStock = document.getElementById('selectedSellStock');
+        const searchInput = document.getElementById('searchStocks');
+        const buyQuantity = document.getElementById('buyQuantity');
+        const sellQuantity = document.getElementById('sellQuantity');
 
-        sellForm.addEventListener('submit', (e) => {
+        function showMessage(area, text, type) {
+            area.textContent = text;
+            area.className = 'message-area ' + type;
+        }
+        function clearMessage(area) {
+            area.textContent = '';
+            area.className = 'message-area';
+        }
+
+        // Every API call goes through here. Not signed in -> back to the sign-in page.
+        async function api(path, body) {
+            const options = body === undefined ? {} : {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            };
+            const response = await fetch(path, options);
+            if (response.status === 401) {
+                window.location.href = 'index.html';
+                throw new Error('Please sign in first');
+            }
+            const data = await response.json();
+            return { ok: response.ok, data };
+        }
+
+        // ---------- Buy side ----------
+
+        function renderSearchResults() {
+            const box = document.getElementById('stockSearchResults');
+            box.innerHTML = '';
+            if (stocks.length === 0) {
+                const empty = document.createElement('div');
+                empty.style.cssText = 'padding: 10px; color: #64748b; font-style: italic;';
+                empty.textContent = searchInput.value.trim() ? 'No stocks match that search' : 'No stocks available currently';
+                box.appendChild(empty);
+                return;
+            }
+            for (const stock of stocks) {
+                const row = document.createElement('button');
+                row.type = 'button';
+                row.style.cssText = 'display: flex; justify-content: space-between; width: 100%; padding: 8px 10px; border: none; border-bottom: 1px solid #e2e8f0; cursor: pointer; text-align: left; font: inherit;';
+                row.style.backgroundColor = stock.StockTicker === buyTicker ? '#dbeafe' : '#ffffff';
+                const name = document.createElement('span');
+                name.textContent = `${stock.StockTicker} (${stock.CompanyName})`;   // textContent so names render safely
+                const price = document.createElement('span');
+                price.textContent = money(stock.Price);
+                row.append(name, price);
+                row.addEventListener('click', () => {
+                    buyTicker = stock.StockTicker;
+                    buyStock = stock;
+                    clearMessage(buyMessageArea);
+                    renderSearchResults();
+                    renderBuy();
+                });
+                box.appendChild(row);
+            }
+        }
+
+        function renderBuy() {
+            const stock = buyStock;
+            document.getElementById('buyCashAvailable').value = money(cash);
+            if (!stock) {
+                document.getElementById('selectedBuyStock').textContent = 'None selected';
+                document.getElementById('buyCurrentPrice').textContent = '--';
+                document.getElementById('buyPriceAuto').value = '';
+                document.getElementById('buyEstimatedTotal').value = '';
+                return;
+            }
+            document.getElementById('selectedBuyStock').textContent = `${stock.StockTicker} (${stock.CompanyName})`;
+            document.getElementById('buyCurrentPrice').textContent = money(stock.Price);
+            document.getElementById('buyPriceAuto').value = money(stock.Price);
+            const quantity = Number(buyQuantity.value);
+            document.getElementById('buyEstimatedTotal').value =
+                Number.isInteger(quantity) && quantity > 0 ? money(quantity * Number(stock.Price)) : '';
+        }
+
+        async function loadStocks() {
+            const q = searchInput.value.trim();
+            const { ok, data } = await api('/api/stocks' + (q ? '?q=' + encodeURIComponent(q) : ''));
+            if (!ok) throw new Error(data.error || 'Failed to load stocks');
+            stocks = data.stocks || [];
+            // get the latest price for the picked stock, even if it isnt in the current search results
+            if (buyTicker) {
+                buyStock = stocks.find((s) => s.StockTicker === buyTicker) || null;
+                if (!buyStock) {
+                    const picked = await api('/api/stocks/' + encodeURIComponent(buyTicker));
+                    buyStock = picked.ok ? picked.data.stock : null;
+                    if (!buyStock) buyTicker = null;
+                }
+            }
+            renderSearchResults();
+            renderBuy();
+        }
+
+        let searchTimer = null;
+        searchInput.addEventListener('input', () => {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => loadStocks().catch(() => {}), 250);   // wait until they stop typing
+        });
+        buyQuantity.addEventListener('input', renderBuy);
+
+        buyForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            if (selectedSellStock.textContent === 'None selected' || selectedSellStock.textContent.trim() === '') {
-                sellMessageArea.textContent = 'No stock selected';
-                sellMessageArea.className = 'message-area error';
-            } else {
-                sellMessageArea.textContent = 'Sale complete';
-                sellMessageArea.className = 'message-area success';
+            if (!buyTicker) {
+                showMessage(buyMessageArea, 'No stock selected', 'error');
+                return;
+            }
+            const shares = Number(buyQuantity.value);
+            if (!Number.isInteger(shares) || shares < 1) {
+                showMessage(buyMessageArea, 'Enter a whole number of shares, 1 or more', 'error');
+                return;
+            }
+            const button = buyForm.querySelector('.action-btn');
+            button.disabled = true;
+            try {
+                const { ok, data } = await api('/api/buy', { ticker: buyTicker, shares });
+                if (!ok) {
+                    showMessage(buyMessageArea, data.error || 'Order failed', 'error');
+                } else {
+                    showMessage(buyMessageArea, data.message || 'Order complete', 'success');
+                    buyQuantity.value = '';
+                }
+                await refresh();
+            } catch (err) {
+                showMessage(buyMessageArea, 'Could not reach the server. Is it running?', 'error');
+            } finally {
+                button.disabled = false;
             }
         });
+
+        // Cancel = back out of the order before it is sent
+        buyForm.querySelector('.cancel-btn').addEventListener('click', () => {
+            buyTicker = null;
+            buyStock = null;
+            buyQuantity.value = '';
+            clearMessage(buyMessageArea);
+            renderSearchResults();
+            renderBuy();
+        });
+
+        // ---------- Sell side ----------
+
+        function renderHoldings() {
+            const tableBody = document.querySelector('#userHoldingsTable tbody');
+            tableBody.innerHTML = '';
+            if (holdings.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="6" class="table-empty-state">No stocks in your portfolio currently</td></tr>';
+                return;
+            }
+            for (const h of holdings) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td></td>
+                    <td>${whole(h.SharesOwned)}</td>
+                    <td>${h.AvgCost == null ? '--' : money(h.AvgCost)}</td>
+                    <td>${money(h.Price)}</td>
+                    <td>${money(h.TotalValue)}</td>
+                    <td><button type="button">Select</button></td>
+                `;
+                row.children[0].textContent = h.StockTicker;
+                if (h.StockTicker === sellTicker) row.style.backgroundColor = '#dbeafe';
+                row.querySelector('button').addEventListener('click', () => {
+                    sellTicker = h.StockTicker;
+                    clearMessage(sellMessageArea);
+                    renderHoldings();
+                    renderSell();
+                });
+                tableBody.appendChild(row);
+            }
+        }
+
+        function renderSell() {
+            const holding = holdings.find((h) => h.StockTicker === sellTicker);
+            if (!holding) {
+                sellTicker = null;
+                document.getElementById('selectedSellStock').textContent = 'None selected';
+                document.getElementById('sellCurrentPrice').textContent = '--';
+                document.getElementById('sellEstimatedProceeds').value = '';
+                return;
+            }
+            document.getElementById('selectedSellStock').textContent =
+                `${holding.StockTicker} (${holding.CompanyName}), ${whole(holding.SharesOwned)} owned`;
+            document.getElementById('sellCurrentPrice').textContent = money(holding.Price);
+            const quantity = Number(sellQuantity.value);
+            document.getElementById('sellEstimatedProceeds').value =
+                Number.isInteger(quantity) && quantity > 0 ? money(quantity * Number(holding.Price)) : '';
+        }
+
+        async function loadPortfolio() {
+            const { ok, data } = await api('/api/portfolio');
+            if (!ok) throw new Error(data.error || 'Failed to load portfolio');
+            holdings = data.holdings || [];
+            cash = Number(data.cash || 0);
+            document.getElementById('summaryCash').textContent = money(data.cash);
+            document.getElementById('summaryPortfolioValue').textContent = money(data.stockValue);
+            document.getElementById('summaryTotal').textContent = money(data.totalValue);
+            renderHoldings();
+            renderSell();
+            renderBuy();
+        }
+
+        sellQuantity.addEventListener('input', renderSell);
+
+        sellForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!sellTicker) {
+                showMessage(sellMessageArea, 'No stock selected', 'error');
+                return;
+            }
+            const shares = Number(sellQuantity.value);
+            if (!Number.isInteger(shares) || shares < 1) {
+                showMessage(sellMessageArea, 'Enter a whole number of shares, 1 or more', 'error');
+                return;
+            }
+            const button = sellForm.querySelector('.action-btn');
+            button.disabled = true;
+            try {
+                const { ok, data } = await api('/api/sell', { ticker: sellTicker, shares });
+                if (!ok) {
+                    showMessage(sellMessageArea, data.error || 'Sale failed', 'error');
+                } else {
+                    showMessage(sellMessageArea, data.message || 'Sale complete', 'success');
+                    sellQuantity.value = '';
+                }
+                await refresh();
+            } catch (err) {
+                showMessage(sellMessageArea, 'Could not reach the server. Is it running?', 'error');
+            } finally {
+                button.disabled = false;
+            }
+        });
+
+        sellForm.querySelector('.cancel-btn').addEventListener('click', () => {
+            sellTicker = null;
+            sellQuantity.value = '';
+            clearMessage(sellMessageArea);
+            renderHoldings();
+            renderSell();
+        });
+
+        // ---------- Market open / closed ----------
+
+        async function loadMarket() {
+            const { ok, data } = await api('/api/market/status');
+            const badge = document.getElementById('marketStatus');
+            const detail = document.getElementById('marketDetail');
+            if (!ok) {
+                badge.textContent = 'UNKNOWN';
+                badge.className = 'status-badge closed';
+                detail.textContent = '';
+                return;
+            }
+            badge.textContent = data.open ? 'OPEN' : 'CLOSED';
+            badge.className = 'status-badge ' + (data.open ? 'open' : 'closed');
+            const hours = `${data.openingTime.slice(0, 5)} to ${data.closingTime.slice(0, 5)} (${data.timeZone})`;
+            detail.textContent = data.open ? `Hours ${hours}` : `${data.reason}. Hours ${hours}`;
+        }
+
+        // ---------- Load everything ----------
+
+        async function refresh() {
+            await Promise.all([loadStocks(), loadPortfolio(), loadMarket()]);
+        }
+
+        window.onload = async () => {
+            try {
+                await refresh();
+            } catch (err) {
+                showMessage(buyMessageArea, err.message || 'Could not reach the server', 'error');
+            }
+            setInterval(() => refresh().catch(() => {}), 15000);
+        };
     </script>
     
 </body>
